@@ -1,3 +1,3 @@
 # engula-go
 
-This is go client of [engula](https://github.com/engula/engua).
+This is go client of [engula](https://github.com/engula/engula).
