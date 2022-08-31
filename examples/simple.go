@@ -41,7 +41,7 @@ func main() {
 		panic(ErrAddrsIsEmpty)
 	}
 
-	builder := engula_go.NewStaticResolverBuilder(addrs)
+	builder := engula_go.NewStaticResolverBuilder(1, addrs)
 	cfg := engula_go.DefaultConfig()
 	cfg.Endpoints = builder.Endpoints()
 	cfg.ResolverBuilder = builder

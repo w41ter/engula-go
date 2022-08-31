@@ -14,18 +14,23 @@
 package engula_go
 
 import (
+	"fmt"
+
+	"google.golang.org/grpc/attributes"
 	"google.golang.org/grpc/resolver"
 )
 
 type StaticResolverBuilder struct {
-	scheme string
-	addrs  []string
+	scheme   string
+	max_conn uint16 // Max num of conns for each server
+	addrs    []string
 }
 
-func NewStaticResolverBuilder(addrs []string) *StaticResolverBuilder {
+func NewStaticResolverBuilder(max_conn uint16, addrs []string) *StaticResolverBuilder {
 	return &StaticResolverBuilder{
-		scheme: "engula",
-		addrs:  addrs,
+		scheme:   "engula",
+		max_conn: max_conn,
+		addrs:    addrs,
 	}
 }
 
@@ -36,9 +41,10 @@ func (b *StaticResolverBuilder) Endpoints() []string {
 
 func (b *StaticResolverBuilder) Build(target resolver.Target, cc resolver.ClientConn, opts resolver.BuildOptions) (resolver.Resolver, error) {
 	r := &StaticResolver{
-		target: target,
-		cc:     cc,
-		addrs:  b.addrs,
+		max_conn: b.max_conn,
+		target:   target,
+		cc:       cc,
+		addrs:    b.addrs,
 	}
 	r.start()
 	return r, nil
@@ -49,15 +55,18 @@ func (b *StaticResolverBuilder) Scheme() string {
 }
 
 type StaticResolver struct {
-	target resolver.Target
-	cc     resolver.ClientConn
-	addrs  []string
+	max_conn uint16
+	target   resolver.Target
+	cc       resolver.ClientConn
+	addrs    []string
 }
 
 func (r *StaticResolver) start() {
-	addrs := make([]resolver.Address, len(r.addrs))
-	for i, addr := range r.addrs {
-		addrs[i] = resolver.Address{Addr: addr}
+	addrs := make([]resolver.Address, 0, len(r.addrs)*int(r.max_conn))
+	for _, addr := range r.addrs {
+		for i := 0; i < int(r.max_conn); i++ {
+			addrs = append(addrs, resolver.Address{Addr: addr, Attributes: attributes.New("tag", fmt.Sprintf("%d", i))})
+		}
 	}
 	r.cc.UpdateState(resolver.State{Addresses: addrs})
 }
